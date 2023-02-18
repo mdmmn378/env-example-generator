@@ -2,9 +2,12 @@ package main
 
 import (
 	"fmt"
+	"io"
+	"log"
 	"os"
 
 	"github.com/BurntSushi/toml"
+	"github.com/urfave/cli"
 )
 
 type any map[string]interface{}
@@ -33,19 +36,30 @@ func walk(m map[string]interface{}) {
 }
 
 func main() {
-	inputFilename := "env.toml"
+	var inputFilename string
+	app := &cli.App{
+		Name:  "FilePath",
+		Usage: "Provide the proper path of the your env file",
+		Action: func(cCtx *cli.Context) error {
+			inputFilename = cCtx.Args().Get(0)
+			return nil
+		},
+	}
+	if err := app.Run(os.Args); err != nil {
+		log.Fatal(err)
+	}
 	input, err := os.Open(inputFilename)
 	if err != nil {
 		panic(err)
 	}
 	defer input.Close()
-
+	body, _ := io.ReadAll(input)
 	var p any
-	if _, err := toml.DecodeReader(input, &p); err != nil {
+	if _, err := toml.Decode(string(body), &p); err != nil {
 		panic(err)
 	}
 	walk(p)
-	outputFilename := "output.toml"
+	outputFilename := "env.example.toml"
 	output, err := os.Create(outputFilename)
 	if err != nil {
 		panic(err)
